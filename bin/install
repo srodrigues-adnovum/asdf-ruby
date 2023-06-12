@@ -125,5 +125,51 @@ install_default_gems() {
   done <"$default_gems"
 }
 
-install_ruby "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH"
+
+win_install_ruby() {
+  local install_type="$1"
+  local version="$2"
+  local install_path="$3" 
+  local arch;
+  local tmp_download_dir; tmp_download_dir=$(mktemp -d -t asdf_asdf-ruby_XXXXXX)
+
+  mkdir -p "${tmp_download_dir}/${version}"
+
+  vercomp "$version" "2.3.3"
+  case $? in
+    1)  #> 
+      case "$(uname -m)" in
+        x86_64) arch="x64" ;;
+        *) arch="x86" ;;
+      esac
+      curl -L "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-${version}/rubyinstaller-${version}-${arch}.7z" -o "${tmp_download_dir}/ruby.${version}.7z"
+      ;;
+    0 | 2) #=< https://github.com/oneclick/rubyinstaller/releases/download/ruby-2.3.3/ruby-2.3.3-x64-mingw32.7z
+      case "$(uname -m)" in
+        x86_64) arch="x64" ;;
+        *) arch="i386" ;;
+      esac
+      curl -L "https://github.com/oneclick/rubyinstaller/releases/download/ruby-${version}/ruby-${version}-${arch}-mingw32.7z" -o "${tmp_download_dir}/ruby.${version}.7z"
+      ;;
+  esac
+
+  curl -sL "https://7-zip.org/a/7zr.exe" -o "${tmp_download_dir}/7z.exe"
+  "${tmp_download_dir}/7z.exe" -aoa -bd -y -o"${tmp_download_dir}/${version}" x "${tmp_download_dir}/ruby.${version}.7z" 
+
+  echo INFO "Copying binaries"
+  local tmp_files; tmp_files=$(find ${tmp_download_dir}/${version} -maxdepth 1 -type d | head -n 2 | tail -n 1 )
+
+  cp -R "${tmp_files}/." "${install_path}"
+  chmod +x "${install_path}/bin/ruby.exe"
+}
+
+case "$(uname -s)" in
+  Windows_NT | MINGW64*) 
+    win_install_ruby "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH"
+    ;;               
+  *) 
+    install_ruby "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH"
+    ;;
+esac 
+
 install_default_gems

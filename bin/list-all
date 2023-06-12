@@ -13,4 +13,17 @@ list_versions() {
   "$(ruby_build_path)" --definitions | grep -v "topaz-dev" | paste -sd " " -
 }
 
-list_versions
+list_win_versions() {
+  v1=$(curl -sL -H "Accept: application/vnd.github+json" https://api.github.com/repos/oneclick/rubyinstaller/releases?per_page=100  | grep -o "tag_name\"\s*:\s*\"ruby[^\"]*" | cut -d '"' -f3 | sed 's/^ruby-//' | sed 's/-1//')
+  v2=$(curl -sL -H "Accept: application/vnd.github+json" https://api.github.com/repos/oneclick/rubyinstaller2/releases?per_page=100 | grep -o "tag_name\"\s*:\s*\"[^\"]*"     | cut -d '"' -f3 | sed 's/^RubyInstaller-head//' | sed 's/^RubyInstaller-//' | sed 's/^rubyinstaller-head//' | sed 's/^rubyinstaller-//' | sed 's/-1//' )
+  echo "${v2} ${v1}"
+}
+
+case "$(uname -s)" in
+  Windows_NT | MINGW64*) 
+    list_win_versions | tr '\n' ' '
+    ;;               
+  *) 
+    list_versions 
+    ;;
+esac 
