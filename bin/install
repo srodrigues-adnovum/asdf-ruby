@@ -134,25 +134,30 @@ win_install_ruby() {
   local tmp_download_dir; tmp_download_dir=$(mktemp -d -t asdf_asdf-ruby_XXXXXX)
 
   mkdir -p "${tmp_download_dir}/${version}"
-
-  vercomp "$version" "2.3.3"
-  case $? in
+  
+  local download_url
+  case $(vercomp "$version" "2.3.3") in
     1)  #> 
       case "$(uname -m)" in
         x86_64) arch="x64" ;;
         *) arch="x86" ;;
       esac
-      curl -L "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-${version}/rubyinstaller-${version}-${arch}.7z" -o "${tmp_download_dir}/ruby.${version}.7z"
+      # e.g 2.4.0 has the 
+      # https://github.com/oneclick/rubyinstaller2/releases/download/2.4.0-8/rubyinstaller-2.4.0-8-x64.7z
+      # https://github.com/oneclick/rubyinstaller2/releases/download/2.4.0-7/rubyinstaller-2.4.0-7-x64.7z
+       download_url=$(curl -fsSL -H "Accept: application/vnd.github+json" https://api.github.com/repos/oneclick/rubyinstaller2/releases?per_page=100 | grep -o "browser_download_url\"\s*:\s*\"[^\"]*-${arch}.7z\"" | grep "${version}" | head -1  | cut -d '"' -f3)
       ;;
     0 | 2) #=< https://github.com/oneclick/rubyinstaller/releases/download/ruby-2.3.3/ruby-2.3.3-x64-mingw32.7z
       case "$(uname -m)" in
         x86_64) arch="x64" ;;
         *) arch="i386" ;;
       esac
-      curl -L "https://github.com/oneclick/rubyinstaller/releases/download/ruby-${version}/ruby-${version}-${arch}-mingw32.7z" -o "${tmp_download_dir}/ruby.${version}.7z"
+      download_url=$(curl -fsSL -H "Accept: application/vnd.github+json"  https://api.github.com/repos/oneclick/rubyinstaller/releases?per_page=100 | grep -o "browser_download_url\"\s*:\s*\"[^\"]*-${arch}-mingw32.7z\"" | grep "${version}" | head -1  | cut -d '"' -f3)
       ;;
   esac
 
+  curl -fsSL "${download_url}" -o "${tmp_download_dir}/ruby.${version}.7z"
+  #get 7z from official site
   curl -sL "https://7-zip.org/a/7zr.exe" -o "${tmp_download_dir}/7z.exe"
   "${tmp_download_dir}/7z.exe" -aoa -bd -y -o"${tmp_download_dir}/${version}" x "${tmp_download_dir}/ruby.${version}.7z" 
 
